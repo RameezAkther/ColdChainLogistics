@@ -1,0 +1,269 @@
+<div class="container">
+    <!-- Date and Time Filter -->
+    <div class="row">
+        <div class="col-md-6">
+            <label class="form-label">Start Date & Time</label>
+            <input type="datetime-local" id="startDateTime" class="form-control">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">End Date & Time</label>
+            <input type="datetime-local" id="endDateTime" class="form-control">
+        </div>
+    </div>
+
+    <!-- Numeric Filters - Row 1 -->
+    <div class="row mt-2">
+        <div class="col-md-4">
+            <label class="form-label">Temperature (°C)</label>
+            <div class="input-group">
+                <input type="number" id="tempFilter" class="form-control" placeholder="Value">
+                <button class="btn btn-outline-primary" onclick="setFilter('tempFilter', 'greater')">≥</button>
+                <button class="btn btn-outline-primary" onclick="setFilter('tempFilter', 'less')">≤</button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Humidity (%)</label>
+            <div class="input-group">
+                <input type="number" id="humidityFilter" class="form-control" placeholder="Value">
+                <button class="btn btn-outline-primary" onclick="setFilter('humidityFilter', 'greater')">≥</button>
+                <button class="btn btn-outline-primary" onclick="setFilter('humidityFilter', 'less')">≤</button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Air Quality</label>
+            <div class="input-group">
+                <input type="number" id="airQualityFilter" class="form-control" placeholder="Value">
+                <button class="btn btn-outline-primary" onclick="setFilter('airQualityFilter', 'greater')">≥</button>
+                <button class="btn btn-outline-primary" onclick="setFilter('airQualityFilter', 'less')">≤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Numeric Filters - Row 2 -->
+    <div class="row mt-2">
+        <div class="col-md-4">
+            <label class="form-label">BMP Temp (°C)</label>
+            <div class="input-group">
+                <input type="number" id="bmpTempFilter" class="form-control" placeholder="Value">
+                <button class="btn btn-outline-primary" onclick="setFilter('bmpTempFilter', 'greater')">≥</button>
+                <button class="btn btn-outline-primary" onclick="setFilter('bmpTempFilter', 'less')">≤</button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Pressure (hPa)</label>
+            <div class="input-group">
+                <input type="number" id="pressureFilter" class="form-control" placeholder="Value">
+                <button class="btn btn-outline-primary" onclick="setFilter('pressureFilter', 'greater')">≥</button>
+                <button class="btn btn-outline-primary" onclick="setFilter('pressureFilter', 'less')">≤</button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Altitude (m)</label>
+            <div class="input-group">
+                <input type="number" id="altitudeFilter" class="form-control" placeholder="Value">
+                <button class="btn btn-outline-primary" onclick="setFilter('altitudeFilter', 'greater')">≥</button>
+                <button class="btn btn-outline-primary" onclick="setFilter('altitudeFilter', 'less')">≤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categorical Filters -->
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <label class="form-label">Light</label>
+            <select id="lightFilter" class="form-select">
+                <option value="">All</option>
+                <option value="Bright">Bright</option>
+                <option value="Dark">Dark</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Vibration</label>
+            <select id="vibrationFilter" class="form-select">
+                <option value="">All</option>
+                <option value="Vibration Detected">Vibration Detected</option>
+                <option value="No Vibration">No Vibration</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Temperature (°C)</th>
+                    <th>Humidity (%)</th>
+                    <th>Air Quality</th>
+                    <th>BMP Temp (°C)</th>
+                    <th>Pressure (hPa)</th>
+                    <th>Altitude (m)</th>
+                    <th>Light</th>
+                    <th>Vibration</th>
+                </tr>
+            </thead>
+            <tbody id="sensorTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="d-flex justify-content-center mt-3">
+        <button id="prevPage" class="btn btn-secondary mx-2">Previous</button>
+        <span id="pageInfo" class="align-self-center"></span>
+        <button id="nextPage" class="btn btn-secondary mx-2">Next</button>
+    </div>
+</div>
+
+<script>
+    let allReadings = [];
+    let filteredData = [];
+    let currentPage1 = 1;
+    const pageSize = 20;
+    let totalPages1 = 1;
+    let filterConditions = {
+        tempFilter: null,
+        humidityFilter: null,
+        airQualityFilter: null,
+        bmpTempFilter: null,
+        pressureFilter: null,
+        altitudeFilter: null
+    };
+
+    document.addEventListener("DOMContentLoaded", async function() {
+        await fetchAllData();
+        setupEventListeners();
+        applyFilters();
+    });
+
+    async function fetchAllData() {
+        try {
+            const response = await fetch(`/device/{{ device_id }}/all_readings`);
+            const data = await response.json();
+            allReadings = data.readings.map(reading => {
+                if (reading.timestamp && typeof reading.timestamp === 'string') {
+                    reading.timestamp = new Date(reading.timestamp).toLocaleString();
+                }
+                // Ensure all fields exist in each reading
+                reading.temperature = reading.temperature || null;
+                reading.humidity = reading.humidity || null;
+                reading.airQuality = reading.airQuality || null;
+                reading.bmp_temperature = reading.bmp_temperature || null;
+                reading.pressure = reading.pressure || null;
+                reading.altitude = reading.altitude || null;
+                reading.light = reading.light || '';
+                reading.vibration = reading.vibration || '';
+                return reading;
+            });
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    }
+
+    function setupEventListeners() {
+        document.getElementById("startDateTime").addEventListener("change", () => { currentPage1 = 1; applyFilters(); });
+        document.getElementById("endDateTime").addEventListener("change", () => { currentPage1 = 1; applyFilters(); });
+        document.getElementById("lightFilter").addEventListener("change", () => { currentPage1 = 1; applyFilters(); });
+        document.getElementById("vibrationFilter").addEventListener("change", () => { currentPage1 = 1; applyFilters(); });
+
+        document.getElementById("prevPage").addEventListener("click", () => {
+            if (currentPage1 > 1) {
+                currentPage1--;
+                displayData();
+            }
+        });
+
+        document.getElementById("nextPage").addEventListener("click", () => {
+            if (currentPage1 < totalPages1) {
+                currentPage1++;
+                displayData();
+            }
+        });
+    }
+
+    function setFilter(filterType, condition) {
+        const value = parseFloat(document.getElementById(filterType).value);
+        if (!isNaN(value)) {
+            filterConditions[filterType] = { value, condition };
+        } else {
+            filterConditions[filterType] = null;
+        }
+        currentPage1 = 1;
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const startDateTime = document.getElementById("startDateTime").value;
+        const endDateTime = document.getElementById("endDateTime").value;
+        const lightFilter = document.getElementById("lightFilter").value;
+        const vibrationFilter = document.getElementById("vibrationFilter").value;
+
+        filteredData = allReadings.filter(reading => {
+            const readingDate = new Date(reading.timestamp);
+            const startDate = startDateTime ? new Date(startDateTime) : null;
+            const endDate = endDateTime ? new Date(endDateTime) : null;
+
+            // Date filter
+            const dateMatch = (!startDate || readingDate >= startDate) &&
+                              (!endDate || readingDate <= endDate);
+
+            // Numeric field filters
+            const numericFilters = [
+                { field: 'temperature', filter: filterConditions.tempFilter },
+                { field: 'humidity', filter: filterConditions.humidityFilter },
+                { field: 'airQuality', filter: filterConditions.airQualityFilter },
+                { field: 'bmp_temperature', filter: filterConditions.bmpTempFilter },
+                { field: 'pressure', filter: filterConditions.pressureFilter },
+                { field: 'altitude', filter: filterConditions.altitudeFilter }
+            ];
+
+            const numericMatch = numericFilters.every(({ field, filter }) => {
+                if (!filter || reading[field] === null) return true;
+                return filter.condition === "greater" 
+                    ? reading[field] >= filter.value 
+                    : reading[field] <= filter.value;
+            });
+
+            // Categorical field filters
+            const lightMatch = !lightFilter || reading.light === lightFilter;
+            const vibrationMatch = !vibrationFilter || reading.vibration === vibrationFilter;
+
+            return dateMatch && numericMatch && lightMatch && vibrationMatch;
+        });
+
+        totalPages1 = Math.max(Math.ceil(filteredData.length / pageSize), 1);
+        displayData();
+    }
+
+    function displayData() {
+        const tbody = document.getElementById("sensorTableBody");
+        tbody.innerHTML = "";
+
+        const startIndex = (currentPage1 - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, filteredData.length);
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        if (paginatedData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No data found</td></tr>';
+        } else {
+            paginatedData.forEach(reading => {
+                const row = `<tr>
+                    <td>${reading.timestamp}</td>
+                    <td>${reading.temperature !== null ? reading.temperature.toFixed(2) : ''}</td>
+                    <td>${reading.humidity !== null ? reading.humidity.toFixed(2) : ''}</td>
+                    <td>${reading.airQuality !== null ? reading.airQuality : ''}</td>
+                    <td>${reading.bmp_temperature !== null ? reading.bmp_temperature.toFixed(2) : ''}</td>
+                    <td>${reading.pressure !== null ? reading.pressure.toFixed(2) : ''}</td>
+                    <td>${reading.altitude !== null ? reading.altitude.toFixed(2) : ''}</td>
+                    <td>${reading.light}</td>
+                    <td>${reading.vibration}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        document.getElementById("pageInfo").textContent = `Page ${currentPage1} of ${totalPages1}`;
+        document.getElementById("prevPage").disabled = currentPage1 <= 1;
+        document.getElementById("nextPage").disabled = currentPage1 >= totalPages1;
+    }
+</script>

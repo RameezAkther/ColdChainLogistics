@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}IoT Device Details{% endblock %}
+
+{% block content %}
+<style>
+    /* Override styles for the device tabs navbar */
+    #deviceTabs {
+        border-bottom: 1px solid #dee2e6;
+    }
+    #deviceTabs .nav-link {
+        color: #000 !important;
+        font-weight: 500;
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        position: relative;
+    }
+    #deviceTabs .nav-link:hover {
+        color: #000 !important;
+        border-color: #e9ecef #e9ecef #dee2e6;
+    }
+    #deviceTabs .nav-link:not(.active):hover::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #ff4d4d;
+        animation: linkUnderline 0.3s ease-out;
+    }
+    #deviceTabs .nav-link.active {
+        color: #000 !important;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+        border-bottom: 3px solid #0d6efd;
+    }
+    #deviceTabs .nav-link.active:hover::after {
+        content: none !important; /* Remove any hover effect on active tab */
+    }
+    #deviceTabs .nav-item {
+        margin-bottom: -1px;
+    }
+    @keyframes linkUnderline {
+        from {
+            transform: scaleX(0);
+        }
+        to {
+            transform: scaleX(1);
+        }
+    }
+</style>
+
+<div class="container mt-4">
+    <h2 class="text-center">Device: {{ device_id }}</h2>
+
+    <ul class="nav nav-tabs" id="deviceTabs">
+        <li class="nav-item">
+            <a class="nav-link active" id="visualization-tab" data-bs-toggle="tab" href="#visualization">Visualizations</a>
+        </li>
+        {% if current_user.role in ['Admin', 'Operator'] %}
+        <li class="nav-item">
+            <a class="nav-link" id="allocation-tab" data-bs-toggle="tab" href="#allocation">Allocation</a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+            <a class="nav-link" id="alerts-tab" data-bs-toggle="tab" href="#alerts">Alert Logs</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="data-tab" data-bs-toggle="tab" href="#data">Sensor Data</a>
+        </li>
+        {% if current_user.role in ['Admin', 'Operator'] %}
+        <li class="nav-item">
+            <a class="nav-link" id="controller-tab" data-bs-toggle="tab" href="#controller">Controller</a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="tab-content mt-3">
+        <!-- Visualizations Tab -->
+        <div class="tab-pane fade show active" id="visualization">
+            {% include "partials/visualization.html" %}
+        </div>
+
+        <!-- Allocation Tab -->
+        {% if current_user.role in ['Admin', 'Operator'] %}
+        <div class="tab-pane fade" id="allocation">
+            {% include "partials/allocation.html" %}
+        </div>
+        {% endif %}
+
+        <!-- Alerts Tab -->
+        <div class="tab-pane fade" id="alerts">
+            {% include "partials/alerts.html" %}
+        </div>
+
+        <!-- Data Table Tab -->
+        <div class="tab-pane fade" id="data">
+            {% include "partials/data_table.html" %}
+        </div>
+
+        <!-- Controller Tab -->
+        {% if current_user.role in ['Admin', 'Operator'] %}
+        <div class="tab-pane fade" id="controller">
+            {% include "partials/controller.html" %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

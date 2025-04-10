@@ -1,0 +1,106 @@
+<div>
+    <h5>Allocate Sensor Node</h5>
+    <form id="allocationForm">
+        <div class="mb-3">
+            <label for="userType" class="form-label">Select User Type</label>
+            <select class="form-control" id="userType" onchange="fetchUsers()">
+                <option value="Truck User">Truck User</option>
+                <option value="Warehouse User">Warehouse User</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="userList" class="form-label">Select User</label>
+            <select class="form-control" id="userList"></select>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="allocateSensor()">Allocate</button>
+    </form>
+
+    <h5 class="mt-4">Allocated Users</h5>
+    <ul id="allocatedUsers" class="list-group"></ul>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        fetchUsers();
+        fetchAllocatedUsers();
+    });
+
+    function fetchUsers() {
+        let userType = document.getElementById("userType").value;
+
+        fetch(`/get_users?user_type=${userType}&device_id={{ device_id }}`)
+            .then(response => response.json())
+            .then(data => {
+                let userList = document.getElementById("userList");
+                userList.innerHTML = "";
+
+                if (data.length === 0) {
+                    userList.innerHTML = '<option disabled>No available users</option>';
+                } else {
+                    data.forEach(user => {
+                        let option = document.createElement("option");
+                        option.value = user._id;
+                        option.textContent = user.name;
+                        userList.appendChild(option);
+                    });
+                }
+            });
+    }
+
+    function fetchAllocatedUsers() {
+        fetch(`/get_allocated_users?device_id={{ device_id }}`)
+            .then(response => response.json())
+            .then(data => {
+                let allocatedList = document.getElementById("allocatedUsers");
+                allocatedList.innerHTML = "";
+
+                if (data.length === 0) {
+                    allocatedList.innerHTML = "<li class='list-group-item text-muted'>No users allocated</li>";
+                } else {
+                    data.forEach(user => {
+                        let li = document.createElement("li");
+                        li.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
+                        li.textContent = `${user.username} (${user.role})`;
+
+                        let deallocateBtn = document.createElement("button");
+                        deallocateBtn.classList.add("btn", "btn-danger", "btn-sm");
+                        deallocateBtn.textContent = "Deallocate";
+                        deallocateBtn.onclick = function () {
+                            deallocateSensor(user._id);
+                        };
+
+                        li.appendChild(deallocateBtn);
+                        allocatedList.appendChild(li);
+                    });
+                }
+            });
+    }
+
+    function allocateSensor() {
+        let userType = document.getElementById("userType").value;
+        let userId = document.getElementById("userList").value;
+
+        fetch("/allocate_sensor", {
+            method: "POST",
+            body: JSON.stringify({ device_id: "{{ device_id }}", user_type: userType, user_id: userId }),
+            headers: { "Content-Type": "application/json" }
+        }).then(response => response.json()).then(data => {
+            alert(data.message);
+            fetchUsers();
+            fetchAllocatedUsers();
+        });
+    }
+
+    function deallocateSensor(userId) {
+        fetch("/deallocate_sensor", {
+            method: "POST",
+            body: JSON.stringify({ device_id: "{{ device_id }}", user_id: userId }),
+            headers: { "Content-Type": "application/json" }
+        }).then(response => response.json()).then(data => {
+            alert(data.message);
+            fetchAllocatedUsers();
+        });
+    }
+</script>

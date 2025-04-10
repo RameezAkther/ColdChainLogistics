@@ -1,0 +1,94 @@
+<div class="container mt-3">
+    <h4>Sensor Controls</h4>
+
+    <div class="row">
+        {% for sensor in ["dht22", "mq135", "lm393", "bmp280", "sw420"] %}
+        <div class="col-md-6 mb-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input sensor-toggle" type="checkbox" id="{{ sensor }}_toggle"
+                    data-sensor="{{ sensor }}" {% if sensor_status.get(sensor, {}).get("status") == "ON" %}checked{% endif %}>
+                <label class="form-check-label" for="{{ sensor }}_toggle">{{ sensor|upper }} Control</label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h4>Threshold Settings</h4>
+    <form id="threshold-form">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="dht22_temp" class="form-label">DHT22 Temperature (°C)</label>
+                <input type="number" class="form-control" id="dht22_temp" value="{{ thresholds.get('dht22', {}).get('temperature', 30) }}" step="0.1">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="dht22_humidity" class="form-label">DHT22 Humidity (%)</label>
+                <input type="number" class="form-control" id="dht22_humidity" value="{{ thresholds.get('dht22', {}).get('humidity', 60) }}" step="0.1">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="mq135_gas" class="form-label">MQ135 Gas (PPM)</label>
+                <input type="number" class="form-control" id="mq135_gas" value="{{ thresholds.get('mq135', {}).get('gas', 100) }}" step="0.1">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="bmp280_pressure" class="form-label">BMP280 Pressure (hPa)</label>
+                <input type="number" class="form-control" id="bmp280_pressure" value="{{ thresholds.get('bmp280', {}).get('pressure', 1000) }}" step="0.1">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="bmp280_altitude" class="form-label">BMP280 Altitude (m)</label>
+                <input type="number" class="form-control" id="bmp280_altitude" value="{{ thresholds.get('bmp280', {}).get('altitude', 150) }}" step="0.1">
+            </div>            
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Thresholds</button>
+    </form>
+</div>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Handle Sensor Toggle
+        document.querySelectorAll(".sensor-toggle").forEach(toggle => {
+            toggle.addEventListener("change", function () {
+                const sensor_id = this.dataset.sensor;
+                const status = this.checked ? "ON" : "OFF";
+
+                fetch(`/toggle_sensor/{{ device_id }}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sensor_id, status })
+                })
+                .then(response => response.json())
+                .then(data => console.log(data))
+                .catch(error => console.error("Error:", error));
+            });
+        });
+
+        // Handle Threshold Form Submission
+        document.getElementById("threshold-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const thresholds = {
+                dht22: {
+                    temperature: document.getElementById("dht22_temp").value,
+                    humidity: document.getElementById("dht22_humidity").value
+                },
+                mq135: {
+                    gas: document.getElementById("mq135_gas").value
+                },
+                bmp280: {
+                    pressure: document.getElementById("bmp280_pressure").value,
+                    altitude: document.getElementById("bmp280_altitude").value
+                }
+            };
+
+
+            fetch(`/update_thresholds/{{ device_id }}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(thresholds)
+            })
+            .then(response => response.json())
+            .then(data => alert("Thresholds Updated Successfully!"))
+            .catch(error => console.error("Error:", error));
+        });
+    });
+</script>

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Login - ColdChain IoT{% endblock %}
+{% block content %}
+<style>
+    .gradient-btn {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        background-size: 200% 200%;
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .gradient-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    .gradient-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #2a5298, #1e3c72);
+        background-size: 200% 200%;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .gradient-btn:hover::before {
+        opacity: 1;
+        animation: gradientFlow 3s ease infinite;
+    }
+    @keyframes gradientFlow {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+    .gradient-btn span {
+        position: relative;
+        z-index: 1;
+    }
+    .card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .card-body {
+        background: white;
+    }
+    .form-control:focus {
+        border-color: #2a5298;
+        box-shadow: 0 0 0 0.25rem rgba(42, 82, 152, 0.25);
+    }
+</style>
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 70vh; margin-top: 25px;">
+    <div class="card shadow-sm" style="width: 100%; max-width: 400px;">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <h2 class="h4" style="color: #2a5298;">Welcome Back</h2>
+                <p class="text-muted">Sign in to your account</p>
+            </div>
+            
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control form-control-lg" name="email" placeholder="Enter your email" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control form-control-lg" name="password" placeholder="Enter your password" required>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn gradient-btn btn-lg">
+                        <span>Login</span>
+                    </button>
+                </div>
+            </form>
+            
+            <div class="text-center mt-3">
+                <small class="text-muted">Don't have an account? <a href="{{ url_for('register') }}" class="text-decoration-none" style="color: #2a5298;">Register</a></small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

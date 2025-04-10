@@ -1,0 +1,172 @@
+<h2 class="text-center my-4">Sensor Data Visualization</h2>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+    body{
+        padding-bottom: 20px;
+    }
+</style>
+<div class="container">
+    <!-- Light and Vibration Status Cards -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-4">
+            <div class="card text-center shadow-lg border-0" id="lightCard">
+                <div class="card-body">
+                    <h5 class="card-title">Light Status</h5>
+                    <p class="card-text font-weight-bold" id="lightStatus">Loading...</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-lg border-0" id="vibrationCard">
+                <div class="card-body">
+                    <h5 class="card-title">Vibration Status</h5>
+                    <p class="card-text font-weight-bold" id="vibrationStatus">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sensor Data Charts (No card backgrounds) -->
+    <div class="row">
+        <div class="col-md-6"><div id="temperatureChart"></div></div>
+        <div class="col-md-6"><div id="humidityChart"></div></div>
+    </div>
+    <div class="row">
+        <div class="col-md-6"><div id="airQualityChart"></div></div>
+        <div class="col-md-6"><div id="pressureChart"></div></div>
+    </div>
+    <div class="row">
+        <div class="col-md-6"><div id="altitudeChart"></div></div>
+        <div class="col-md-6"><div id="lightChart"></div></div>
+    </div>
+    <div class="row">
+        <div class="col-md-6"><div id="vibrationChart"></div></div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5 class="text-center">Device Location</h5>
+            <div id="map" style="height: 400px;"></div>
+        </div>
+    </div>    
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    let device_id = "{{ device_id }}";
+
+    let plots = {
+        temperatureChart: { 
+            data: [{
+                x: [], y: [], 
+                type: 'scatter', 
+                mode: 'lines+markers',  // <-- changed to lines+markers
+                name: 'Temperature', 
+                line: { color: '#FF6F61', width: 3 } 
+            }],
+            layout: { title: 'Temperature (°C)', xaxis: { title: 'Time' }, yaxis: { title: '°C' } }
+        },
+        humidityChart: { 
+            data: [{ x: [], y: [], type: 'scatter', mode: 'lines+markers', name: 'Humidity', line: { color: '#6B8E23' } }],
+            layout: { title: 'Humidity (%)', xaxis: { title: 'Time' }, yaxis: { title: '%' } }
+        },
+        airQualityChart: { 
+            data: [{ x: [], y: [], type: 'scatter', fill: 'tozeroy', name: 'Air Quality', line: { color: '#4682B4' } }],
+            layout: { title: 'Air Quality (PPM)', xaxis: { title: 'Time' }, yaxis: { title: 'PPM' } }
+        },
+        pressureChart: { 
+            data: [{ x: [], y: [], type: 'scatter', fill: 'tonexty', name: 'Pressure', line: { color: '#FFD700', width: 2 } }],
+            layout: { title: 'Pressure (hPa)', xaxis: { title: 'Time' }, yaxis: { title: 'hPa' } }
+        },
+        altitudeChart: { 
+            data: [{
+                x: [], y: [], 
+                type: 'scatter', 
+                mode: 'lines+markers',  // <-- changed from lines with dash to lines+markers
+                name: 'Altitude', 
+                line: { color: '#FFB6C1', width: 2 }  // <-- removed dash style
+            }],
+            layout: { title: 'Altitude (m)', xaxis: { title: 'Time' }, yaxis: { title: 'Meters' } }
+        },
+        lightChart: { 
+            data: [{ x: [], y: [], type: 'scatter', mode: 'lines', fill: 'tozeroy', name: 'Light', line: { color: '#FFA07A' } }],
+            layout: { title: 'Light Detection', xaxis: { title: 'Time' }, yaxis: { title: 'State (0/1)' } }
+        },
+        vibrationChart: { 
+            data: [{ x: [], y: [], type: 'scatter', mode: 'lines', fill: 'tozeroy', name: 'Vibration', line: { color: '#20B2AA' } }],
+            layout: { title: 'Vibration Detection', xaxis: { title: 'Time' }, yaxis: { title: 'State (0/1)' } }
+        }
+    };
+
+    for (let chart in plots) {
+        Plotly.newPlot(chart, plots[chart].data, plots[chart].layout);
+    }
+
+    function updateCharts() {
+        fetch(`/live_data/${device_id}`)
+            .then(response => response.json())
+            .then(data => {
+                let { timestamps, temperatures, humidity, air_quality, pressure, altitude, light, vibration } = data;
+
+                let updatedData = {
+                    temperatureChart: { x: timestamps, y: temperatures },
+                    humidityChart: { x: timestamps, y: humidity },
+                    airQualityChart: { x: timestamps, y: air_quality },
+                    pressureChart: { x: timestamps, y: pressure },
+                    altitudeChart: { x: timestamps, y: altitude },
+                    lightChart: { x: timestamps, y: light },
+                    vibrationChart: { x: timestamps, y: vibration }
+                };
+
+                for (let chart in updatedData) {
+                    Plotly.update(chart, { x: [updatedData[chart].x], y: [updatedData[chart].y] });
+                }
+
+                document.getElementById("lightStatus").innerText = light[0] === 1 ? "Bright" : "Dark";
+                document.getElementById("vibrationStatus").innerText = vibration[0] === 1 ? "Vibration Detected" : "No Vibration";
+
+                document.getElementById("lightCard").className = `card text-center shadow-lg border-0 ${light[0] === 1 ? 'bg-warning text-dark' : 'bg-light text-dark'}`;
+                document.getElementById("vibrationCard").className = `card text-center shadow-lg border-0 ${vibration[0] === 1 ? 'bg-danger text-white' : 'bg-light text-dark'}`;
+            })
+            .catch(error => console.error("Error fetching live data:", error));
+    }
+
+    setInterval(updateCharts, 5000);
+
+
+</script>
+<script>
+    let map = L.map('map').setView([20.5937, 78.9629], 5);  // Default center: India
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+
+    function updateMap() {
+        fetch(`/location_data/${device_id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.lat && data.lng) {
+                    let latLng = [data.lat, data.lng];
+
+                    if (marker) {
+                        marker.setLatLng(latLng);
+                    } else {
+                        marker = L.marker(latLng).addTo(map);
+                    }
+
+                    map.setView(latLng, 14);
+
+                    marker.bindPopup(`Device Location (${data.source})`).openPopup();
+                } else {
+                    console.log("No valid coordinates");
+                }
+            })
+            .catch(err => console.error("Error fetching location:", err));
+    }
+
+    updateMap();
+    setInterval(updateMap, 30000); // every 30 seconds
+</script>

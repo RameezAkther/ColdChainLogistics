@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}IoT Devices{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">ESP32 Devices Status</h2>
+
+    <div id="devices-container" class="row">
+        {% if devices %}
+            {% for device in devices %}
+            <div class="col-md-4">
+                <div class="card shadow-lg p-3 mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Device ID: {{ device.sensor_id }}</h5>
+                        <p class="card-text">
+                            <strong>Status: </strong>
+                            {% if device.status == "online" %}
+                                <span class="badge bg-success">Online</span>
+                            {% else %}
+                                <span class="badge bg-danger">Offline</span>
+                            {% endif %}
+                        </p>
+                        <p class="text-muted">
+                            <strong>Last Seen: </strong> 
+                            {{ device.last_seen }}
+                        </p>
+                        <a href="/device/${device.sensor_id}" class="btn btn-primary">
+                            View More
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-center text-muted">No devices found.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function fetchDeviceStatus() {
+    fetch("{{ url_for('get_iot_status') }}")
+        .then(response => response.json())
+        .then(devices => {
+            const container = document.getElementById("devices-container");
+            if (!container) return;
+            
+            container.innerHTML = devices.length === 0 
+                ? '<p class="text-center text-muted">No devices found.</p>'
+                : '';
+
+            devices.forEach(device => {
+                const statusBadge = device.status === "online" 
+                    ? '<span class="badge bg-success">Online</span>'
+                    : '<span class="badge bg-danger">Offline</span>';
+
+                // Handle MongoDB date format
+                let lastSeen = "Unknown";
+                if (device.last_seen && device.last_seen.$date) {
+                    try {
+                        lastSeen = new Date(device.last_seen.$date).toLocaleString();
+                    } catch (e) {
+                        console.error("Date parsing error:", e);
+                        lastSeen = "Invalid Date";
+                    }
+                }
+
+                container.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card shadow-lg p-3 mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Device ID: ${device.sensor_id}</h5>
+                                <p class="card-text">
+                                    <strong>Status: </strong> ${statusBadge}
+                                </p>
+                                <p class="text-muted">
+                                    <strong>Last Seen: </strong> ${lastSeen}
+                                </p>
+                                <a href="/device/${device.sensor_id}" class="btn btn-primary">
+                                    View More
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            const container = document.getElementById("devices-container");
+            if (container) {
+                container.innerHTML = '<p class="text-center text-danger">Error loading device status</p>';
+            }
+        });
+}
+    // Fetch data every 5 seconds
+    setInterval(fetchDeviceStatus, 5000);
+    document.addEventListener('DOMContentLoaded', fetchDeviceStatus);
+</script>
+{% endblock %}

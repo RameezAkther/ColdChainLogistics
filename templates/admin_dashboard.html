@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Admin Dashboard</h2>
+    <p class="text-muted text-center">Manage users and their roles</p>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr id="user-row-{{ user._id }}">
+                    <td>{{ loop.index }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if user.role == 'Admin' %} bg-danger
+                            {% elif user.role == 'Operator' %} bg-warning
+                            {% elif user.role == 'Truck User' %} bg-primary
+                            {% elif user.role == 'Warehouse User' %} bg-info
+                            {% else %} bg-secondary {% endif %}" id="role-badge-{{ user._id }}">
+                            {{ user.role if user.role else 'Pending Approval' }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if user.role is none %}
+                        <div class="input-group">
+                            <select class="form-select role-select" data-user-id="{{ user._id }}">
+                                <option selected disabled>Select Role</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Operator">Operator</option>
+                                <option value="Truck User">Truck User</option>
+                                <option value="Warehouse User">Warehouse User</option>
+                            </select>
+                            <button class="btn btn-sm btn-success approve-btn" data-user-id="{{ user._id }}">Approve</button>
+                        </div>
+                        {% elif user.role == "Admin" %}
+                        <span class="btn btn-sm btn-secondary disabled">Admin</span>
+                        {% else %}
+                        <a href="{{ url_for('delete_user', user_id=user._id) }}" class="btn btn-sm btn-danger">Delete</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- JavaScript to handle approval -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".approve-btn").forEach(button => {
+        button.addEventListener("click", function () {
+            let userId = this.getAttribute("data-user-id");
+            let selectElement = document.querySelector(`.role-select[data-user-id='${userId}']`);
+            let selectedRole = selectElement.value;
+
+            if (!selectedRole) {
+                alert("Please select a role before approving.");
+                return;
+            }
+
+            fetch(`/approve_user/${userId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: selectedRole })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`role-badge-${userId}`).textContent = selectedRole;
+                    document.getElementById(`role-badge-${userId}`).className = `badge ${data.badge_class}`;
+                    document.querySelector(`#user-row-${userId} .input-group`).innerHTML = `<span class="badge bg-success">${selectedRole}</span>`;
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+    });
+});
+</script>
+{% endblock %}

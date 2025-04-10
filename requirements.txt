@@ -1,0 +1,8 @@
+paho-mqtt
+flask
+flask_pymongo
+flask_bcrypt
+flask_login
+bson
+ipinfo
+ngrok
